@@ -14,7 +14,7 @@ class Square extends React.Component{
 
 	render(){
 		return (
-			<button className="square" onClick={this.props.onClick} >
+			<button className="square" onClick={this.props.onClick} style={{background: this.props.background}}>
 				{this.props.value}
 			</button>
 		)
@@ -24,7 +24,8 @@ class Square extends React.Component{
 class Board extends React.Component{
 	
 	renderSquare(i){
-		return <Square value={this.props.squares[i]} onClick={() => this.props.onClick(i)}/>;
+		return <Square value={this.props.squares[i]} onClick={() => this.props.onClick(i)}
+			background={(this.props.line.indexOf(i) === -1) ? '#fff' : 'red'}/>;
 	}
 
 	render(){
@@ -56,6 +57,12 @@ class Board extends React.Component{
 	}
 }
 
+function ToogleBtn(props){
+	return (
+		<button onClick={props.onClick}>{props.value}</button>
+	);
+}
+
 class Game extends React.Component{
 	constructor(props) {
 	  super(props);
@@ -63,13 +70,16 @@ class Game extends React.Component{
 	  this.state = {
 	  	history: [{
 	  		squares: Array(9).fill(null),
-	  		location: '(0,0)'
+	  		location: '(0,0)',
+	  		line:null
 	  	}],
 	  	xIsNext: true,
-	  	stepNumber: 0
+	  	stepNumber: 0,
+	  	order: true
 	  };
 
 	  this.handleClick = this.handleClick.bind(this);
+	  this.toogleOrder = this.toogleOrder.bind(this);
 	}
 
 
@@ -79,8 +89,9 @@ class Game extends React.Component{
 		const current = history[stepNumber];
 		const squares = current.squares.slice();
 		let location = '(' + (Math.floor(i/3)+1) + ',' + (i%3+1) + ')';
+		const winnerInfo = checkWinner(squares);
 
-		if(squares[i] || checkWinner(squares)){
+		if(squares[i] || winnerInfo.winner){
 			return;
 		}
 		
@@ -90,7 +101,17 @@ class Game extends React.Component{
 		}else{
 			squares[i] = 'O';
 		}
-		this.setState({history: history.concat([{squares: squares,location:location}]),
+
+		const winnerInfo1 = checkWinner(squares);
+			// const winnerInfo = checkWinner(squares);
+		// console.log(winnerInfo);
+		// if(winnerInfo.winner){
+		// 	debugger;
+		// 	this.setState({line:winnerInfo.line});
+		// }
+
+		this.setState({history: history.concat([{squares: squares,location:location,
+			line:(winnerInfo1.winner ? winnerInfo1.line : [])}]),
 			xIsNext: !xIsNext,stepNumber : stepNumber +1});
 	}
 
@@ -98,6 +119,12 @@ class Game extends React.Component{
 		this.setState({
 			stepNumber: step,
 			xIsNext: (step%2) ? false : true
+		});
+	}
+	toogleOrder(){
+		let order = this.state.order;
+		this.setState({
+			order: !order
 		});
 	}
 
@@ -108,15 +135,17 @@ class Game extends React.Component{
 		const squares = current.squares.slice();
 
 		let status = '';
-		let winner = checkWinner(squares);
+		let winner = checkWinner(squares).winner;
+
 		if(winner){
 			status = 'Winner is ' + winner;
 		}else{
 			status = 'Nex player: ' + (this.state.xIsNext ? 'X' : 'O');
 		}
 		
+
+
 		const moves = history.map((step, move) => {
-			console.log(stepNumber === move);
 			const desc = move ? ('Move #' + move + step.location): 'Game start';
 			return(
 				<li key={move}>
@@ -126,14 +155,21 @@ class Game extends React.Component{
 			);
 		});
 
+		if(!this.state.order){
+			moves.reverse();
+		}
+
 		return(
 			<div className="game">
 				<div className="game-board">
-					<Board status={status} squares={squares} onClick={this.handleClick}/>
+					<Board status={status} squares={squares} line={current.line?current.line:[]} onClick={this.handleClick}/>
 				</div>
 				<div className="game-info">
 					<div>{/* status */}</div>
 					<ol>{moves}</ol>
+				</div>
+				<div>
+					<ToogleBtn value={this.state.order?"正序":"逆序"} onClick={this.toogleOrder}/>
 				</div>
 			</div>
 		);
@@ -152,17 +188,20 @@ function checkWinner(arr){
 		[2,4,6]
 	];
 
-	let winner =  null;
+	let winnerInfo =  {winner: null,line: null};
 
 	for(let i = 0;i < lines.length ;i ++){
 		const [a,b,c] = lines[i];
-		// console.log(arr[a] === arr[b] && arr[a] === arr[c]);
 		if(arr[a] === arr[b] && arr[a] === arr[c]){
-			winner = arr[a];
+
+			winnerInfo ={
+				winner: arr[a],
+				line: lines[i]
+			}
 			break;
 		}
 	}
-	return winner;
+	return winnerInfo;
 }
 
 ReactDOM.render(
